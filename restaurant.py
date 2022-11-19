@@ -37,12 +37,15 @@ def one_page_url(query, page_cnt):
     
 
 def main():
-    query = "신촌 카페"
+    make_store_list()
+    pass
+
+def make_store_list():
+    global query
     
     page_cnt = 1
-    
     while True:
-        
+        print(f'now looking at page : {page_cnt}')
         if not one_page_url(query, page_cnt):
             break
         page_cnt+=1
@@ -50,7 +53,10 @@ def main():
 
 store_list = []
 
+query = input("키워드 입력 ㄱㄱ : ")
+
 main()
+make_store_list()
 print(store_list)
 print(len(store_list))
 
