@@ -1,23 +1,8 @@
 from unittest import result
 import requests, json, os, sys, time
-from unittest import result
-from selenium import webdriver
-from seleniumwire import webdriver as wired_webdriver
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver import FirefoxOptions
-
+from playwright.sync_api import Playwright, sync_playwright
 import time
 
-import pandas as pd
-import numpy as np
-import math
-import json
-import matplotlib.pyplot as plt
-import seaborn as sns
-import time
-import re
-from bs4 import BeautifulSoup
 
 f1 = open("page1.html", "w")
 f2 = open("page2.html", "w")
@@ -55,22 +40,40 @@ def one_page_url(query, page_cnt):
     # list에 가게들 있는거 같음
     #print(res['result']['place']['list'])
 
-def from_one_store_comment(id, browser):    
+def from_one_store_comment(id, playwright):    
     BASE_URL=f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor' 
     # 이제 여기서 처리한다.
     print(BASE_URL)
     
-    browser.get(BASE_URL)
+    browser = playwright.chromium.launch(headless=True)
+    context = browser.new_context()
     
-    html = browser.page_source
-    soup = BeautifulSoup(html, 'lxml')
-    while True:
-        try:
-            more = browser.find_element(By.XPATH, '//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a')
-            more.click()
-            # 되는거 같으니 network 움직임 분석
-        except:
-            return
+    page = context.new_page()
+    page.goto(BASE_URL)
+    
+    #print(page.locator('.lfH3O').click())
+    count = 0
+    
+    print(page.content(), file = f1)
+    print(f"count is {page.locator('.fvwqf').count()}")
+    page.locator('.fvwqf').click()
+    #print(element.count())
+    #element.click()
+    
+    print(f"count is {page.locator('.fvwqf').count()}")
+    page.locator('.fvwqf').click()
+    
+    #print(element.count())
+    #element.click()
+    
+    print(f"count is {page.locator('.fvwqf').count()}")
+    page.locator('.fvwqf').click()
+    
+    print(f"count is {page.locator('.fvwqf').count()}")
+    page.locator('.fvwqf').click()
+    
+    print(f"count is {page.locator('.fvwqf').count()}")
+    page.locator('.fvwqf').click()
     
     #while True:
     #    element = page.locator('.lfH3O')
@@ -82,7 +85,7 @@ def from_one_store_comment(id, browser):
     
     #print(page.query_selector('.lfH3O').click())
     # 페이지 출력
-    #print(page.content(), file=f2)
+    print(page.content(), file=f2)
     
     
     pass
@@ -114,14 +117,8 @@ store_list = []
 #print(store_list)
 #print(len(store_list))
 # 1452440066 // 카페 언더우드
-
-webdriver_service = Service('/usr/bin/geckodriver')
-
-opts = FirefoxOptions()
-opts.add_argument("--headless")		# turn off GUI
-browser = webdriver.Firefox(service=webdriver_service, options=opts)
-
-from_one_store_comment(1452440066, browser)
+with sync_playwright() as playwright:
+    from_one_store_comment(1452440066, playwright)
 
 f1.close()
 f2.close()
