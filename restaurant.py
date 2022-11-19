@@ -61,13 +61,23 @@ def from_one_store_comment(id, browser):
     browser.get(BASE_URL)
     
     cnt=0
-    while True:
+    while cnt < 100:
         try:
-            more = browser.find_element(
-                By.XPATH, '//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a')
+            #temp = browser.page_source
+            more = browser.find_element(By.XPATH, 
+                                        '//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a')
             more.click()
+            #temp2 = browser.page_source
+            
+            #if temp == temp2:
+            #    print('no advance')
+            #    break
+            
             print(f'loop count is {cnt}!')
+            # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor 여기 무한루프 걸림
             #del browser.requests
+            # //*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a/svg
+            #//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a
             cnt+=1
                 # 되는거 같으니 network 움직임 분석
         except:
@@ -122,17 +132,14 @@ def from_one_store_comment(id, browser):
         #print(eval_list)
     
     
-    
-    
-    
-
 
 def main():
-    # make_store_list()
     global browser
+    
+    make_store_list()
     for id in store_list:
         from_one_store_comment(id, browser)
-    pass
+    
 
 
 def make_store_list():
@@ -146,23 +153,27 @@ def make_store_list():
         page_cnt += 1
 
 
-store_list = []
 
-#query = input("키워드 입력 ㄱㄱ : ")
 
-# print(store_list)
-# print(len(store_list))
-# 1452440066 // 카페 언더우드
+if __name__ == "__main__":
+    store_list = []
 
-webdriver_service = Service('/usr/bin/geckodriver')
+    query = input("키워드 입력 ㄱㄱ : ")
 
-opts = FirefoxOptions()
-opts.add_argument("--headless")		# turn off GUI
-browser = wired_webdriver.Firefox(service=webdriver_service, options=opts)
+    # print(store_list)
+    # print(len(store_list))
+    # 1452440066 // 카페 언더우드
 
-#main()
+    webdriver_service = Service('/usr/bin/geckodriver')
 
-#for i in 
-from_one_store_comment(1137614062, browser)
+    opts = FirefoxOptions()
+    opts.add_argument("--headless")		# turn off GUI
+    browser = wired_webdriver.Firefox(service=webdriver_service, options=opts)
 
-f1.close()
+    #main()
+
+    #for i in 
+    # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor
+    from_one_store_comment(1452440066, browser)
+
+    f1.close()
