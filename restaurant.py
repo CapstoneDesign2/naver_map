@@ -86,7 +86,7 @@ def from_one_store_comment(id, playwright):
     
     
     lim = 0
-    while lim < 10000:
+    while lim < 5000:
         try:
             #print(page.locator('.fvwqf').count())
             page.locator('.fvwqf').click(timeout = 1000)
@@ -176,16 +176,24 @@ def main():
     global browser
     
     make_store_list()
-    with sync_playwright() as playwright:
-        for idx ,id in enumerate(store_list):
-            from_one_store_comment(id, playwright)
-            print(f'finised number {idx} store')
+    #with sync_playwright() as playwright:
+    #    for idx ,id in enumerate(store_list):
+    #        from_one_store_comment(id, playwright)
+    #        print(f'finised number {idx + 1} store')
     
 
 
-def make_store_list():
-    global query
-
+def make_store_list(query):
+    #global query
+    global store_list
+    #query = input("키워드 입력 ㄱㄱ : ")
+    
+    # store list 초기화
+    store_list = []
+    
+    f1 = open(f'{query}.txt', 'w')
+    print(f'looking for cafe in {query}!')
+    
     page_cnt = 1
     while True:
         print(f'now looking at page : {page_cnt}')
@@ -193,20 +201,27 @@ def make_store_list():
             break
         page_cnt += 1
 
-
-
+    # store list 저장
+    
+    for i in store_list:
+        print(i, file=f1)
+    
+    f1.close()
 
 if __name__ == "__main__":
     store_list = []
     f1 = open("page.txt", "w")
     print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=f1)
-    query = input("키워드 입력 ㄱㄱ : ")
+    #query = input("키워드 입력 ㄱㄱ : ")
 
     # print(store_list)
     # print(len(store_list))
     # 1452440066 // 카페 언더우드
+    CAFE_LIST = ['신촌 카페', '성수 카페', '홍대 카페', '강남 카페', '익선 카페', '이태원 카페', '압구정 카페', '잠실 카페', '망원 카페', '여의도 카페', '반포 카페']
+    for i in CAFE_LIST:
+        make_store_list(i)
 
-    main()    
+    #main()    
     #for i in 
     # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor
     #https://pcmap.place.naver.com/restaurant/19796689/review/visitor
