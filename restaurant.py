@@ -1,11 +1,9 @@
 from unittest import result
 import requests, json, os, sys, time
 from unittest import result
-from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.common.by import By
-from seleniumwire import webdriver as wired_webdriver
-from selenium.webdriver import FirefoxOptions
+from playwright.sync_api import Playwright, sync_playwright
+
+
 import pandas as pd
 import numpy as np
 import math
@@ -16,7 +14,6 @@ import time
 import re
 from bs4 import BeautifulSoup
 
-f1 = open("page.txt", "w")
 #f2 = open("page2.html", "w")
 # fvwqf 버튼 class
 
@@ -27,13 +24,34 @@ f1 = open("page.txt", "w")
 # https://pcmap.place.naver.com/restaurant/1391453544/review/visitor
 # 들어가서 더보기 button 찾아서 클릭하면 된다.
 
+LABEL_MAPPING_TABLE ={
+    '가성비가 좋아요' : '가성비',
+    
+    '매장이 청결해요' : '청결',
+    '화장실이 깨끗해요' : '청결',
+    
+    '디저트가 맛있어요' : '맛',
+    '커피가 맛있어요' : '맛',
+    '음료가 맛있어요' : '맛',
+    '특별한 메뉴가 있어요' : '맛',
+    
+    '인테리어가 멋져요' : '분위기',
+    '뷰가 좋아요' : '분위기',
+    '대화하기 좋아요' : '분위기',
+    '사진이 잘 나와요' : '분위기',
+    '좌석이 편해요' : '분위기',
+    
+    '친절해요' : '친절'
+}
+
+LABEL_COLUMNS = ['가성비', '청결', '맛', '분위기', '친절']
 
 def one_store_id_get(data):
     global store_list
     # for datum in data:
     #print(datum['id'], file=f)
     store_list.extend([x['id'] for x in data])
-    time.sleep(1)
+    time.sleep(0.5)
 
 
 def one_page_url(query, page_cnt):
@@ -53,92 +71,114 @@ def one_page_url(query, page_cnt):
     # print(res['result']['place']['list'])
 
 
-def from_one_store_comment(id, browser):
+def from_one_store_comment(id, playwright):
     BASE_URL = f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor'
     # 이제 여기서 처리한다.
     print(BASE_URL)
 
-    browser.get(BASE_URL)
+    browser = playwright.chromium.launch(headless=True)
+    context = browser.new_context()
     
-    cnt=0
-    while cnt < 100:
+    # 페이지 열었다.
+    page = context.new_page()
+    page.goto(BASE_URL)
+    #context.tracing.start(screenshots=True, snapshots=True)
+    
+    
+    lim = 0
+    while lim < 10000:
         try:
-            #temp = browser.page_source
-            more = browser.find_element(By.XPATH, 
-                                        '//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a')
-            more.click()
-            #temp2 = browser.page_source
-            
-            #if temp == temp2:
-            #    print('no advance')
+            #print(page.locator('.fvwqf').count())
+            page.locator('.fvwqf').click(timeout = 1000)
+            print(lim)
+            #print()
+            #if cnt == 0:
             #    break
-            
-            print(f'loop count is {cnt}!')
-            # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor 여기 무한루프 걸림
-            #del browser.requests
-            # //*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a/svg
-            #//*[@id="app-root"]/div/div/div/div[7]/div[2]/div[3]/div[2]/a
-            cnt+=1
-                # 되는거 같으니 network 움직임 분석
+            lim+=1
         except:
-            #print("exception")
             break
-    try:
-        comment_boxes = browser.find_elements(By.CLASS_NAME, 'YeINN')
-    except:
-        return
+    print('click ended!\n')
+    reviewCounter = page.locator('.YeINN').count()
     
-    for comment_box in comment_boxes:
-        #print(type(comment_box))
+    for idx in range(0, reviewCounter):
+        comment_box = page.locator('.YeINN').nth(idx)
+        #print(comment_box.locator('.ZZ4OK').text_content(timeout=1000))
+        print(f'writing {idx} comment')
+        # 더보기 클릭시도
         comment = ""
-        eval_list = []
-        
-        # 더보기 건지기
-        try:
-            comment_box.find_element(By.CLASS_NAME, 'rvCSr')
-            comment_box.find_element(By.CLASS_NAME, 'rvCSr').click()
-        except:
-            pass
-            #print('no 더보기')
-        
-        # 평가 더보기 건지기
-        try: 
-            comment_box.find_element(By.CLASS_NAME, 'ZGKcF')
-            comment_box.find_element(By.CLASS_NAME, 'ZGKcF').click()
-        except:
-            pass
-            #print('no 평가 더보기')
+        label_count = 0
         
         try:
-            comment_text = comment_box.find_element(By.CLASS_NAME, 'zPfVt')
-            comment = comment_text.text
-            #print(comment_text.text)
+            comment_box.locator('.ZGKcF').click(timeout=1000)
         except:
             pass
-            #print("리뷰 내용 없음")
+            #print('라벨 더보기 없음')
         
         try:
-            eval_list = comment_box.find_element(By.CLASS_NAME ,'gyAGI').find_elements(By.CLASS_NAME, 'P1zUJ')
+            comment_box.locator('.rvCSr').click(timeout=1000)
         except:
             pass
-            #print("태그 없음")
+            #print('더보기 없음')
         
-        eval_list = [x.text for x in eval_list]
-        comment = comment.replace('\n', ' ')
-        # comment : 댓글 내용
-        # eval_list : 평가 항목
+        # 댓글 가져오기
+        try:
+            comment = comment_box.locator('.ZZ4OK').locator('.zPfVt').text_content(timeout=1000)
+        except:
+            pass
         
-        print(comment, eval_list, file=f1)
-        #print(eval_list)
+        # 댓글 길이 check해서 짧으면 continue
+        
+        if len(comment) < 3:
+            continue
+        
+        
+        # 라벨 가져오기        
+        try:
+            label_count = comment_box.locator('.gyAGI').locator('.P1zUJ').count()
+        except:
+            pass
+        
+        #print(label_count)
+        #print(comment_box.locator('.gyAGI').locator('.P1zUJ').nth(0).text_content(timeout=1000))
+        dictionary_label = {
+            '가성비' : 0,
+            '청결' : 0,
+            '맛' : 0,
+            '분위기' : 0,
+            '친절' : 0
+        }
+        
+        for i in range(0, label_count):
+            try:
+                #print(comment_box.locator('div.gyAGI').text_context(timeout=1000))
+                one_label = comment_box.locator('.gyAGI').locator('.P1zUJ').nth(i).text_content(timeout=1000)
+                #print(one_label)
+                if one_label in LABEL_MAPPING_TABLE.keys():
+                    dictionary_label[LABEL_MAPPING_TABLE[one_label]] += 1
+            except:
+                print('이게 아닌데;;')
+        
+        #comment_box.locator('.zPfVt').text_content(timeout=1)
+        comment = comment.replace('\n', ' ') # 엔터 스페이스바로 바꾸기
+        print(comment, '\t'.join([str(x) for x in dictionary_label.values()]),file=f1, sep='\t')
+        
+        #print('\t'.join())
+        
+        #for i in dictionary_label.values():
+        #    print(comment, file=f1, end='\t')
+        
+        #print(dictionary_label, file=f1)
+        
+    #context.tracing.stop(path = "trace.zip")
+    print(reviewCounter)
     
-    
-
 def main():
     global browser
     
     make_store_list()
-    for id in store_list:
-        from_one_store_comment(id, browser)
+    with sync_playwright() as playwright:
+        for id in store_list:
+            from_one_store_comment(id, playwright)
     
 
 
@@ -157,23 +197,19 @@ def make_store_list():
 
 if __name__ == "__main__":
     store_list = []
-
+    f1 = open("page.txt", "w")
+    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=f1)
     query = input("키워드 입력 ㄱㄱ : ")
 
     # print(store_list)
     # print(len(store_list))
     # 1452440066 // 카페 언더우드
 
-    webdriver_service = Service('/usr/bin/geckodriver')
-
-    opts = FirefoxOptions()
-    opts.add_argument("--headless")		# turn off GUI
-    browser = wired_webdriver.Firefox(service=webdriver_service, options=opts)
-
-    #main()
-
+    main()    
     #for i in 
     # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor
-    from_one_store_comment(1452440066, browser)
+    #https://pcmap.place.naver.com/restaurant/19796689/review/visitor
+    #with sync_playwright() as playwright:
+    #    from_one_store_comment(19796689, playwright)
 
     f1.close()
