@@ -177,8 +177,9 @@ def main():
     
     make_store_list()
     with sync_playwright() as playwright:
-        for id in store_list:
+        for idx ,id in enumerate(store_list):
             from_one_store_comment(id, playwright)
+            print(f'finised number {idx} store')
     
 
 
