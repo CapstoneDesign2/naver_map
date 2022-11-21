@@ -41,6 +41,7 @@ LABEL_COLUMNS = ['가성비', '청결', '맛', '분위기', '친절']
 
 store_list = []
 review_list = []
+TOTAL_COMMENTS = 0
 
 def one_store_id_get(data):
     global store_list
@@ -67,13 +68,11 @@ def one_page_url(query, page_cnt):
     # print(res['result']['place']['list'])
 
 
-def from_one_store_comment(id, playwright):
+def from_one_store_comment(id, playwright, query):
     BASE_URL = f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor'
     # 이제 여기서 처리한다.
-    global review_list
     print(BASE_URL)
-
-    browser = playwright.chromium.launch(headless=True)
+    browser = playwright.chromium.launch(headless=False)
     context = browser.new_context()
     
     # 페이지 열었다.
@@ -81,6 +80,9 @@ def from_one_store_comment(id, playwright):
     page.goto(BASE_URL)
     #context.tracing.start(screenshots=True, snapshots=True)
     
+    global TOTAL_COMMENTS
+    local_list = []
+
     
     lim = 0
     while lim < 5000:
@@ -106,14 +108,14 @@ def from_one_store_comment(id, playwright):
         
         try:
             comment_box.locator('.ZGKcF').click(timeout=1000)
-            time.sleep(random.randrange(1, 3))
+            time.sleep(random.uniform(0.4, 1.6))
         except:
             pass
             
         
         try:
             comment_box.locator('.rvCSr').click(timeout=1000)
-            time.sleep(random.randrange(1, 3))
+            time.sleep(random.uniform(0.6, 1.4))
         except:
             pass
         
@@ -156,20 +158,24 @@ def from_one_store_comment(id, playwright):
                 print('이게 아닌데;;')
         
         #comment_box.locator('.zPfVt').text_content(timeout=1)
-        comment = comment.replace('\n', ' ') # 엔터 스페이스바로 바꾸기
+        comment = comment.replace('\n', ' ').replace('\t', ' ') # 엔터 스페이스바로 바꾸기 tab도 스페이스바로 바꾸기
         label_string = '\t'.join([str(x) for x in dictionary_label.values()])
-        
         final_string = f'{comment}\t{label_string}'
         
-        review_list.append(final_string)
-        
-        print(final_string)
-        
+        local_list.append(final_string)
+        #print(final_string)
+    TOTAL_COMMENTS += len(local_list)
+
     print(f'reviewed {reviewCounter} comments from store {BASE_URL}')
-    
     # 완료하면 페이지 닫기
     page.close()
     
+    write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
+    for i in local_list:
+        print(i, file=write_file)
+    write_file.close()
+
+
     
 def read_from_store_list(read_file):    
     global store_list
@@ -183,6 +189,7 @@ def read_from_store_list(read_file):
 def main():
     global browser
     global review_list
+    global TOTAL_COMMENTS
     
     query = "강남"
     
@@ -192,16 +199,21 @@ def main():
     read_file.close()
     # 읽어오기 종료
     
+    write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
+    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
+    write_file.close()
+
+
     with sync_playwright() as playwright:
         for idx ,id in enumerate(store_list):
-            from_one_store_comment(id, playwright)
+            from_one_store_comment(id, playwright, query)
             print(f'finised number {idx + 1} store')
+            print(f'now total comment number is {TOTAL_COMMENTS}')
     
-    write_file = open(f'{query}.tsv', 'w')
-    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
+    
     for i in review_list:
         print(i, file=write_file)
-    write_file.close()
+    
 
 def make_store_list(query):
     #global query
