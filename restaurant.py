@@ -8,15 +8,8 @@ import pandas as pd
 import numpy as np
 import math
 import json
-import matplotlib.pyplot as plt
-import seaborn as sns
 import time
-import re
-from bs4 import BeautifulSoup
-
-#f2 = open("page2.html", "w")
-# fvwqf 버튼 class
-
+import random
 # https://map.naver.com/v5/api/search?caller=pcweb&query=%EC%8B%A0%EC%B4%8C%20%EC%B9%B4%ED%8E%98&page=10
 # 한 가게의 url 은 다음과 같은 구조로 된다.
 # https://map.naver.com/v5/entry/place/{가게 id}
@@ -46,6 +39,9 @@ LABEL_MAPPING_TABLE ={
 
 LABEL_COLUMNS = ['가성비', '청결', '맛', '분위기', '친절']
 
+store_list = []
+review_list = []
+
 def one_store_id_get(data):
     global store_list
     # for datum in data:
@@ -74,6 +70,7 @@ def one_page_url(query, page_cnt):
 def from_one_store_comment(id, playwright):
     BASE_URL = f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor'
     # 이제 여기서 처리한다.
+    global review_list
     print(BASE_URL)
 
     browser = playwright.chromium.launch(headless=True)
@@ -91,9 +88,7 @@ def from_one_store_comment(id, playwright):
             #print(page.locator('.fvwqf').count())
             page.locator('.fvwqf').click(timeout = 1000)
             print(lim)
-            #print()
-            #if cnt == 0:
-            #    break
+            time.sleep(random.random())
             lim+=1
         except:
             break
@@ -108,17 +103,19 @@ def from_one_store_comment(id, playwright):
         comment = ""
         label_count = 0
         
+        
         try:
             comment_box.locator('.ZGKcF').click(timeout=1000)
+            time.sleep(random.randrange(1, 3))
         except:
             pass
-            #print('라벨 더보기 없음')
+            
         
         try:
             comment_box.locator('.rvCSr').click(timeout=1000)
+            time.sleep(random.randrange(1, 3))
         except:
             pass
-            #print('더보기 없음')
         
         # 댓글 가져오기
         try:
@@ -160,28 +157,51 @@ def from_one_store_comment(id, playwright):
         
         #comment_box.locator('.zPfVt').text_content(timeout=1)
         comment = comment.replace('\n', ' ') # 엔터 스페이스바로 바꾸기
-        print(comment, '\t'.join([str(x) for x in dictionary_label.values()]),file=f1, sep='\t')
+        label_string = '\t'.join([str(x) for x in dictionary_label.values()])
         
-        #print('\t'.join())
+        final_string = f'{comment}\t{label_string}'
         
-        #for i in dictionary_label.values():
-        #    print(comment, file=f1, end='\t')
+        review_list.append(final_string)
         
-        #print(dictionary_label, file=f1)
+        print(final_string)
         
-    #context.tracing.stop(path = "trace.zip")
-    print(reviewCounter)
+    print(f'reviewed {reviewCounter} comments from store {BASE_URL}')
+    
+    # 완료하면 페이지 닫기
+    page.close()
+    
+    
+def read_from_store_list(read_file):    
+    global store_list
+    
+    for i in read_file.readlines():
+        store_list.append(i)
+    
+    
+    
     
 def main():
     global browser
+    global review_list
     
-    make_store_list()
-    #with sync_playwright() as playwright:
-    #    for idx ,id in enumerate(store_list):
-    #        from_one_store_comment(id, playwright)
-    #        print(f'finised number {idx + 1} store')
+    query = "강남"
     
-
+    # 파일에서 카페목록 읽어오기
+    read_file = open(f'{query}.txt', 'r')
+    read_from_store_list(read_file)
+    read_file.close()
+    # 읽어오기 종료
+    
+    with sync_playwright() as playwright:
+        for idx ,id in enumerate(store_list):
+            from_one_store_comment(id, playwright)
+            print(f'finised number {idx + 1} store')
+    
+    write_file = open(f'{query}.tsv', 'w')
+    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
+    for i in review_list:
+        print(i, file=write_file)
+    write_file.close()
 
 def make_store_list(query):
     #global query
@@ -209,23 +229,17 @@ def make_store_list(query):
     f1.close()
 
 if __name__ == "__main__":
-    store_list = []
-    f1 = open("page.txt", "w")
-    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=f1)
     #query = input("키워드 입력 ㄱㄱ : ")
 
     # print(store_list)
     # print(len(store_list))
     # 1452440066 // 카페 언더우드
-    CAFE_LIST = ['신촌 카페', '성수 카페', '홍대 카페', '강남 카페', '익선 카페', '이태원 카페', '압구정 카페', '잠실 카페', '망원 카페', '여의도 카페', '반포 카페']
-    for i in CAFE_LIST:
-        make_store_list(i)
-
-    #main()    
-    #for i in 
+    #CAFE_LIST = ['신촌 카페', '성수 카페', '홍대 카페', '강남 카페', '익선 카페', '이태원 카페', '압구정 카페', '잠실 카페', '망원 카페', '여의도 카페', '반포 카페']
+    #for i in CAFE_LIST:
+    #    make_store_list(i)
+    #make_store_list('여의도 카페')
+    main()
     # https://pcmap.place.naver.com/restaurant/1946991741/review/visitor
     #https://pcmap.place.naver.com/restaurant/19796689/review/visitor
     #with sync_playwright() as playwright:
-    #    from_one_store_comment(19796689, playwright)
-
-    f1.close()
+    #    from_one_store_comment(19796689, playwright
