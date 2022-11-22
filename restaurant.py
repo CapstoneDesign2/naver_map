@@ -1,13 +1,7 @@
-from unittest import result
-import requests, json, os, sys, time
+import requests
 from unittest import result
 from playwright.sync_api import Playwright, sync_playwright
 
-
-import pandas as pd
-import numpy as np
-import math
-import json
 import time
 import random
 # https://map.naver.com/v5/api/search?caller=pcweb&query=%EC%8B%A0%EC%B4%8C%20%EC%B9%B4%ED%8E%98&page=10
