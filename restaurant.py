@@ -160,7 +160,6 @@ def from_one_store_comment(id, page, query):
 
     print(f'reviewed {reviewCounter} comments from store {BASE_URL}')
     # 완료하면 페이지 닫기
-    page.close()
     
     global write_lock
     write_lock.acquire()
