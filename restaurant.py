@@ -65,15 +65,10 @@ def one_page_url(query, page_cnt):
 #쓰기 작업시 사용할 lock 생성.
 write_lock = threading.Lock()
 
-def from_one_store_comment(id, playwright, query):
+def from_one_store_comment(id, page, query):
     BASE_URL = f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor'
     # 이제 여기서 처리한다.
     print(BASE_URL)
-    browser = playwright.chromium.launch(headless=False)
-    context = browser.new_context()
-    
-    # 페이지 열었다.
-    page = context.new_page()
     page.goto(BASE_URL)
     #context.tracing.start(screenshots=True, snapshots=True)
     
@@ -193,7 +188,7 @@ def main():
     global review_list
     global TOTAL_COMMENTS
     
-    query = "잠실"
+    query = "홍대"
     
     # 파일에서 카페목록 읽어오기
     read_file = open(f'{query}.txt', 'r')
@@ -220,8 +215,8 @@ def main():
     for thread in thread_list:
         thread.join()
 
-    for i in review_list:
-        print(i, file=write_file)
+    #for i in review_list:
+    #    print(i, file=write_file)
 
 def store_comment_multithread(query):
     global store_list
@@ -230,6 +225,11 @@ def store_comment_multithread(query):
     global mutex
     try:
         with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=False)
+            context = browser.new_context()
+    
+            # 페이지 열었다.
+            page = context.new_page()
 
             while True:
                 now_idx = 0
@@ -248,7 +248,7 @@ def store_comment_multithread(query):
                     break
 
                 cafeId = store_list[now_idx]
-                from_one_store_comment(cafeId, playwright, query)
+                from_one_store_comment(cafeId, page, query)
                 print(f'finised number {now_idx + 1} store')
                 print(f'now total comment number is {TOTAL_COMMENTS}')
 
