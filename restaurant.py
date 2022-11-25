@@ -166,7 +166,10 @@ def from_one_store_comment(id, playwright, query):
     
     write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
     for i in local_list:
-        print(i, file=write_file)
+        try:
+            print(i, file=write_file)
+        except:
+            continue
     write_file.close()
 
 
@@ -193,9 +196,9 @@ def main():
     read_file.close()
     # 읽어오기 종료
     
-    write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
-    print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
-    write_file.close()
+    #write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
+    #print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
+    #write_file.close()
 
 
     with sync_playwright() as playwright:
@@ -205,8 +208,8 @@ def main():
             print(f'now total comment number is {TOTAL_COMMENTS}')
     
     
-    for i in review_list:
-        print(i, file=write_file)
+    #for i in review_list:
+    #    print(i, file=write_file)
     
 
 def make_store_list(query):
