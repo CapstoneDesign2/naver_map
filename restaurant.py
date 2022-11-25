@@ -1,3 +1,4 @@
+import threading
 import requests
 from unittest import result
 from playwright.sync_api import Playwright, sync_playwright
@@ -61,6 +62,8 @@ def one_page_url(query, page_cnt):
     # list에 가게들 있는거 같음
     # print(res['result']['place']['list'])
 
+#쓰기 작업시 사용할 lock 생성.
+write_lock = threading.Lock()
 
 def from_one_store_comment(id, playwright, query):
     BASE_URL = f'https://pcmap.place.naver.com/restaurant/{id}/review/visitor'
@@ -164,10 +167,13 @@ def from_one_store_comment(id, playwright, query):
     # 완료하면 페이지 닫기
     page.close()
     
+    global write_lock
+    write_lock.acquire()
     write_file = open(f'{query}.tsv', 'a', encoding='UTF-8')
     for i in local_list:
         print(i, file=write_file)
     write_file.close()
+    write_lock.release()
 
 
     
@@ -177,15 +183,17 @@ def read_from_store_list(read_file):
     for i in read_file.readlines():
         store_list.append(i)
     
-    
-    
-    
+
+#공유자원 review_cnt와 이를 제어할 lock 생성.
+review_cnt = 0
+mutex = threading.Lock()
+
 def main():
     global browser
     global review_list
     global TOTAL_COMMENTS
     
-    query = "강남"
+    query = "잠실"
     
     # 파일에서 카페목록 읽어오기
     read_file = open(f'{query}.txt', 'r')
@@ -197,16 +205,55 @@ def main():
     print('댓글\t가성비\t청결\t맛\t분위기\t친절', file=write_file)
     write_file.close()
 
+    thread_list = []
+    thread_cnt = 10
+    
+    #thread_cnt 만큼 스레드 만듬
+    for _ in range(thread_cnt):
+        thread_list.append(threading.Thread(target=store_comment_multithread,args=(query,)))
 
-    with sync_playwright() as playwright:
-        for idx ,id in enumerate(store_list):
-            from_one_store_comment(id, playwright, query)
-            print(f'finised number {idx + 1} store')
-            print(f'now total comment number is {TOTAL_COMMENTS}')
+    #만든 스레드 일제히 실행
+    for thread in thread_list:
+        thread.start()
     
-    
+    #만든 스레드 모두 끝날 때 까지 기다림
+    for thread in thread_list:
+        thread.join()
+
     for i in review_list:
         print(i, file=write_file)
+
+def store_comment_multithread(query):
+    global store_list
+    global review_cnt
+    global TOTAL_COMMENTS
+    global mutex
+    try:
+        with sync_playwright() as playwright:
+
+            while True:
+                now_idx = 0
+                #공유자원 review_cnt에 대한 lock
+                mutex.acquire()
+
+                if review_cnt < len(store_list): 
+                    #현재 review_cnt를 nowIdx에 저장하고 review_cnt를 +1.
+                    # 이후 lock을 release.
+                    now_idx = review_cnt
+                    review_cnt += 1
+                    mutex.release()
+                else:
+                    #마지막 카페일 경우 release 후 break.
+                    mutex.release()
+                    break
+
+                cafeId = store_list[now_idx]
+                from_one_store_comment(cafeId, playwright, query)
+                print(f'finised number {now_idx + 1} store')
+                print(f'now total comment number is {TOTAL_COMMENTS}')
+
+    except Exception as e:
+        print(e)                
     
 
 def make_store_list(query):
