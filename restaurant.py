@@ -188,7 +188,7 @@ def main():
     global review_list
     global TOTAL_COMMENTS
     
-    query = "강남"
+    query = "여의도"
     
     # 파일에서 카페목록 읽어오기
     read_file = open(f'{query}.txt', 'r')
